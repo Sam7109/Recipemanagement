@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Toggle between login and signup forms
+            $('#show-signup').on('click', function () {
+                $('#login-form').hide();
+                $('#signup-form-container').show();
+            });
+
+            $('#show-login').on('click', function () {
+                $('#signup-form-container').hide();
+                $('#login-form').show();
+            });
+
+            // Handle Login Form Submission
+            $('#login-form').submit(function (e) {
+                e.preventDefault(); // Prevent default form submission
+
+                const email = $('#login-email').val();
+                const password = $('#login-password').val();
+
+                // Axios POST request to the login route
+                axios.post('/users/isValidUser', {
+                    email: email,
+                    password: password
+                })
+                .then((response) => {
+            if (response.data.success) {
+                console.log("Token:", response.data.token);
+                console.log(response.data)
+              localStorage.setItem("jwt",  response.data.token);
+
+              console.log("Login successful:", response.data);
+              // Handle successful login (e.g., redirect to dashboard)
+               window.location.href = "/home"; // Example redirection after login
+            }
+          })
+                .catch(error => {
+                    alert('Login failed: ' + error.response.data.errors[0].msg);
+                    console.error(error.response.data);
+                });
+            });
+
+            // Handle Signup Form Submission
+            $('#signup-form').submit(function (e) {
+                e.preventDefault(); // Prevent default form submission
+
+                const username = $('#signup-username').val();
+                const email = $('#signup-email').val();
+                const password = $('#signup-password').val();
+                const confirmPassword = $('#signup-confirm-password').val();
+
+                // Axios POST request to the signup route
+                axios.post('/users/registeruser', {
+                    username: username,
+                    email: email,
+                    password: password,
+                    confirmPassword: confirmPassword
+                })
+                .then(response => {
+                    alert('Signup successful');
+                    console.log(response.data);
+                    $('#signup-form-container').hide();
+                    $('#login-form').show(); // Show login form after signup
+                })
+                .catch(error => {
+                    alert('Signup failed: ' + error.response.data.errors[0].msg);
+                    console.error(error.response.data);
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+
+    <!-- Login Form -->
+    <div class="container mt-5" id="login-form">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <h2 class="text-center">Login</h2>
+                <form>
+                    <div class="form-group">
+                        <label for="login-email">Email address</label>
+                        <input type="email" class="form-control" id="login-email" placeholder="Enter email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" class="form-control" id="login-password" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                    <div class="text-center mt-3">Don't have an account? <a href="javascript:void(0);" id="show-signup">Sign up</a></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Form -->
+    <div class="container mt-5" id="signup-form-container" style="display:none;">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <h2 class="text-center">Sign Up</h2>
+                <form id="signup-form">
+                    <div class="form-group">
+                        <label for="signup-username">Username</label>
+                        <input type="text" class="form-control" id="signup-username" placeholder="Enter username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-email">Email address</label>
+                        <input type="email" class="form-control" id="signup-email" placeholder="Enter email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" class="form-control" id="signup-password" placeholder="Enter password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm-password">Confirm Password</label>
+                        <input type="password" class="form-control" id="signup-confirm-password" placeholder="Confirm password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+                    <div class="text-center mt-3">Already have an account? <a href="javascript:void(0);" id="show-login">Login</a></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
