@@ -80,7 +80,16 @@
   <body>
     <div class="container mt-5">
       <h1 class="text-center mb-4">Your Favorite Meals, Just a Click Away</h1>
-
+      <div style="position: absolute; top: 10px; right: 10px;">
+        <button
+        id="logoutBtn"
+        class="btn btn-danger"
+        style="height: 40px;"
+      >
+        Logout
+      </button>
+      </div>
+    
       <!-- Trigger Button for Adding New Recipe -->
       <button
         type="button"
@@ -124,7 +133,12 @@
           </div>
         </div>
       </div>
-
+      <div class="input-group mb-3">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search recipes..." aria-label="Search recipes" aria-describedby="button-addon2">
+        <div class="input-group-append">
+          <button class="btn btn-outline-secondary" type="button" id="searchButton">Search</button>
+        </div>
+      </div>
       <!-- Section to Display All Recipes -->
       <div id="recipe-list" class="recipe-list-container mt-4">
         <!-- Recipes will be populated here dynamically -->
@@ -230,6 +244,17 @@
     </div>
 
     <script>
+$(document).ready(function () {
+      // Logout Button Functionality
+      $("#logoutBtn").click(function () {
+        // Clear JWT token from localStorage
+        localStorage.removeItem("jwt");
+
+        // Redirect to /validate page
+        window.location.href = "/validate";
+      });
+    })
+
       $(document).ready(function () {
         // Fetch all recipes when the page loads
         axios
@@ -377,6 +402,92 @@
             });
         });
       });
+
+      // Function to fetch and display recipes
+      function fetchRecipes(query = '') {
+        axios.get('/users/searchRecipe', { // Ensure the endpoint is correct and accessible
+            params: { query: query },
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // Confirm the token is being sent correctly
+            },
+        })
+        .then((response) => {
+            const recipes = response.data;
+            console.log(recipes); // Debugging to see what data is returned
+            const recipeList = $('#recipe-list');
+            recipeList.empty(); // Clear previous results
+
+            if (recipes.length === 0) {
+                recipeList.html('<p>No recipes found!</p>'); // Show a message if no recipes are found
+                return;
+            }
+
+            recipes.forEach((recipe) => {
+                // Ensure all fields exist and are accessed correctly
+                const recipeItem = `
+                    <div class="recipe-item" data-id="${recipe.id}">
+                        <div class="card">
+                            <div class="row no-gutters">
+                                <div class="col-md-4 recipe-card">
+                                    <img src="${recipe.image}" class="card-img" alt="Recipe Image">
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${recipe.description || 'No Title'}</h5> <!-- Default if no title -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                recipeList.append(recipeItem);
+            });
+
+            // Use event delegation for dynamically added elements
+            recipeList.on("click", ".recipe-item", function () {
+                const recipeId = $(this).data("id");
+                const selectedRecipe = recipes.find(recipe => recipe.id === recipeId);
+
+                if (!selectedRecipe) {
+                    console.error('Recipe details not found');
+                    return;
+                }
+
+                // Safely accessing properties with fallbacks
+                const recipeDetail = `
+                    <h5 class="modal-title">${selectedRecipe.description || 'No Description'}</h5>
+                    <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
+                    <p><strong>Ingredients:</strong> ${selectedRecipe.ingredients || 'Not specified'}</p>
+                    <p><strong>Instructions:</strong> ${selectedRecipe.instructions || 'Not specified'}</p>
+                    <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime || 'Not specified'}</p>
+                    <p><strong>Serving:</strong> ${selectedRecipe.serving || 'Not specified'}</p>
+                    <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty || 'Not specified'}</p>
+                `;
+                $("#recipeDetailContent").html(recipeDetail);
+                $("#recipeDetailModal").modal("show");
+            });
+        })
+        .catch((error) => {
+            console.error('Error fetching recipes:', error);
+            alert('Failed to fetch recipes, please check console for details.');
+        });
+    }
+
+    // Binding event listeners to buttons and inputs
+    $('#searchButton').click(function () {
+        const query = $('#searchInput').val().trim();
+        fetchRecipes(query);
+    });
+
+    $('#searchInput').on('keypress', function (event) {
+        if (event.which === 13) { // Enter key pressed
+            const query = $(this).val().trim();
+            fetchRecipes(query);
+        }
+    });
+
+    // Initial fetch without any query
+    
     </script>
   </body>
 </html>

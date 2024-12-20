@@ -14,4 +14,7 @@ router.post('/isValidUser',signup.isValidUser)
 router.post('/submitRecipe',AuthenticateRoutes.protect,Recipe.submitRecipe) 
 //get Recipe
 router.get('/getAllRecipes',AuthenticateRoutes.protect,Recipe.getAllRecipes)
+//search Recipe 
+router.get('/searchRecipe',AuthenticateRoutes.protect,Recipe.searchRecipe)
+                
 module.exports = router ;

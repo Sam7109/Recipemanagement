@@ -1,5 +1,5 @@
 const Recipe = require("../model/recipe");
-
+const { Sequelize } = require('sequelize');
 exports.submitRecipe = async (req, res) => {
     try {
         const iscreatedby = req.user.id;
@@ -68,3 +68,24 @@ exports.getAllRecipes = async (req, res) => {
         return res.status(500).json({ message: "Error retrieving recipes" });
     }
 };
+
+exports.searchRecipe = async (req, res) => {
+    try{
+        const {query} = req.query
+        const recipe = await Recipe.findAll({
+            where: {
+                description: {
+                    [Sequelize.Op.like]: `%${query}%`
+                }
+            }
+        })
+        if(recipe.length === 0 || !recipe){
+            return res.status(404).json({ message: "No recipes found" });
+        }
+        return res.status(200).json(recipe)
+    }
+    catch(error){
+        console.error(error);
+        return res.status(500).json({ message: "Error retrieving recipes" });
+    }
+}
