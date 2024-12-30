@@ -23,6 +23,9 @@
       .card {
         background-color: #ffffff;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border-radius: 10px; /* Rounded corners */
+        border: 1px solid #ddd; /* Border for the card */
       }
       .card-title {
         font-size: 1.5rem;
@@ -51,19 +54,22 @@
         max-height: 150px;
         object-fit: cover;
         width: 100%;
+        border-bottom: 1px solid #ddd; /* Border between image and card body */
       }
       .form-group label {
         font-weight: bold;
       }
       .recipe-list-container {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column; /* Display recipes vertically */
         gap: 20px;
       }
       .recipe-item {
-        flex: 1 1 calc(33% - 20px);
-        min-width: 280px;
         cursor: pointer;
+      }
+      .input-group {
+        max-width: 600px; /* Shorten the search bar */
+        margin: 0 auto 20px; /* Center the search bar and add bottom margin */
       }
       @media (max-width: 768px) {
         .recipe-item {
@@ -75,20 +81,52 @@
           flex: 1 1 100%;
         }
       }
+      .character-counter {
+        float: right;
+        font-size: 0.8em;
+        color: #6c757d;
+      }
+      .form-group {
+        position: relative;
+      }
     </style>
   </head>
   <body>
     <div class="container mt-5">
       <h1 class="text-center mb-4">Your Favorite Meals, Just a Click Away</h1>
       <div style="position: absolute; top: 10px; right: 10px;">
-        <button
-        id="logoutBtn"
-        class="btn btn-danger"
-        style="height: 40px;"
-      >
-        Logout
-      </button>
+          <!-- My Profile Button -->
+          <button id="myProfileBtn" class="btn btn-primary" style="margin-right: 10px;">
+              My Profile
+          </button>
+          <button id="logoutBtn" class="btn btn-danger">
+              Logout
+          </button>
       </div>
+  </div>
+  
+  <!-- Filter Form -->
+<!-- Filter Form -->
+<div class="mb-4">
+ 
+  <form id="filterForm" class="form-inline justify-content-center">
+    <div class="form-group mr-2">
+      <label for="filterDifficultySelect" class="mr-2">Difficulty:</label>
+      <select class="form-control" id="filterDifficultySelect">
+        <option value="" selected disabled>Select Option</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+    <div class="form-group mr-2">
+      <label for="filterCookingTimeInput" class="mr-2">Max Cooking Time:</label>
+      <input type="number" class="form-control" id="filterCookingTimeInput" placeholder="Max Time">
+    </div>
+    <button type="submit" class="btn btn-primary">Filter</button>
+  </form>
+</div>
+
     
       <!-- Trigger Button for Adding New Recipe -->
       <button
@@ -144,7 +182,6 @@
         <!-- Recipes will be populated here dynamically -->
       </div>
     </div>
-
     <!-- Modal for Adding New Recipe -->
     <div
       class="modal fade"
@@ -178,25 +215,30 @@
                   type="text"
                   class="form-control"
                   id="description"
+                  maxlength="40"
                   required
                 />
+                <span class="character-counter" id="description-counter">0/40</span>
               </div>
               <div class="form-group">
                 <label for="ingredients">Ingredients</label>
-                <input
-                  type="text"
+                <textarea
                   class="form-control"
                   id="ingredients"
+                  maxlength="500"
                   required
-                />
+                ></textarea>
+                <span class="character-counter" id="ingredients-counter">0/500</span>
               </div>
               <div class="form-group">
                 <label for="instructions">Instructions</label>
                 <textarea
                   class="form-control"
                   id="instructions"
+                  maxlength="1000"
                   required
                 ></textarea>
+                <span class="character-counter" id="instructions-counter">0/1000</span>
               </div>
               <div class="form-group">
                 <label for="cookingtime">Cooking Time</label>
@@ -217,13 +259,13 @@
                 />
               </div>
               <div class="form-group">
-                <label for="difficulty">Difficulty</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="difficulty"
-                  required
-                />
+                <label for="difficultySelect">Difficulty</label>
+                <select class="form-control" id="difficulty" required>
+                  <option value="" selected disabled>Select difficulty</option>
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="imageFile">Image</label>
@@ -244,6 +286,72 @@
     </div>
 
     <script>
+     $(document).ready(function () {
+    // Bind form submission event handler
+    $('#filterForm').submit(function (event) {
+        event.preventDefault();
+        const difficulty = $('#difficultyoptions').val();
+        const cookingTime = $('#cookingTimeoptions').val();
+
+        axios.get('users/filterRecipe', {
+            params: {
+                difficulty: difficulty,
+                cookingTime: cookingTime
+            },
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('jwt')}`
+            },
+        })
+        .then(function (response) {
+            const recipes = response.data.recipes; // Ensure this matches the structure of the response
+            const recipeList = $('#recipe-list');
+            recipeList.empty(); // Clear previous results
+
+            if (recipes.length === 0) {
+                recipeList.html('<p>No recipes found!</p>');
+                return;
+            }
+
+            // Populate the recipe list with filtered recipes
+            recipes.forEach(function (recipe) {
+                const recipeItem = `
+                    <div class="col-md-4 mb-3">
+                        <div class="card" data-id="${recipe.id}">
+                            <img src="${recipe.image}" class="card-img-top" alt="Recipe Image">
+                            <div class="card-body">
+                                <h5 class="card-title">${recipe.description}</h5> <!-- Assuming title is stored in description based on your data structure -->
+                                <p>${recipe.description}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                recipeList.append(recipeItem);
+            });
+
+            // Add modal functionality to each card
+            $('.card').click(function() {
+                const id = $(this).data('id');
+                const selectedRecipe = recipes.find(r => r.id === id);
+                const modalContent = `
+                    <h5>${selectedRecipe.description}</h5> <!-- Adjusted to use description for title as your data suggests -->
+                    <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
+                    <p><strong>Description:</strong> ${selectedRecipe.ingredients}</p> <!-- Assuming ingredients field is used as a description -->
+                    <p><strong>Instructions:</strong> ${selectedRecipe.instructions}</p>
+                    <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime}</p>
+                    <p><strong>Serving:</strong> ${selectedRecipe.serving}</p>
+                    <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty}</p>
+                `;
+                $('#recipeModal .modal-body').html(modalContent);
+                $('#recipeModalLabel').text(selectedRecipe.description); // Adjusted to use description for title
+                $('#recipeModal').modal('show');
+            });
+        })
+        .catch(function (error) {
+            console.error('Error fetching filtered recipes:', error);
+        });
+    });
+});
+
 $(document).ready(function () {
       // Logout Button Functionality
       $("#logoutBtn").click(function () {
@@ -254,6 +362,15 @@ $(document).ready(function () {
         window.location.href = "/validate";
       });
     })
+
+    $(document).ready(function () {
+    // Code inside runs after the document is fully loaded
+    $("#myProfileBtn").click(function () {
+        // Redirect to /validate page
+        window.location.href = "/myProfile";  
+    })
+});
+
 
       $(document).ready(function () {
         // Fetch all recipes when the page loads
@@ -488,6 +605,44 @@ $(document).ready(function () {
 
     // Initial fetch without any query
     
+    $(document).ready(function () {
+  // Add character counter functionality
+  function updateCharacterCount(element, counterId, maxLength) {
+    const currentLength = element.val().length;
+    $(`#${counterId}`).text(`${currentLength}/${maxLength}`);
+  }
+
+  // Initialize character counters
+  $('#description').on('input', function() {
+    updateCharacterCount($(this), 'description-counter', 40);
+  });
+
+  $('#ingredients').on('input', function() {
+    updateCharacterCount($(this), 'ingredients-counter', 500);
+  });
+
+  $('#instructions').on('input', function() {
+    updateCharacterCount($(this), 'instructions-counter', 1000);
+  });
+
+  // Update form submission to validate lengths
+  $("#recipeForm").submit(function (e) {
+    e.preventDefault();
+
+    const description = $("#description").val();
+    const ingredients = $("#ingredients").val();
+    const instructions = $("#instructions").val();
+
+    if (description.length > 40 || ingredients.length > 500 || instructions.length > 1000) {
+      alert("Please ensure your text is within the character limits.");
+      return;
+    }
+
+    // ... rest of your existing form submission code ...
+  });
+  
+  // ... rest of your existing code ...
+});
     </script>
   </body>
 </html>

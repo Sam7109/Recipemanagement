@@ -8,7 +8,7 @@ const Recipe = sequelize.define('Recipe', {
         unique: false
     },
     ingredients: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(191),
         allowNull: false,
         unique: false, // Remove uniqueness constraint unless required
     },

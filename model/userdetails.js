@@ -25,6 +25,15 @@ const Userdetails = sequelize.define('Userdetails', {
         type : DataTypes.INTEGER ,
         allowNull : true ,
         unique : true
+    },
+    role: {
+        type: DataTypes.STRING,
+        defaultValue: 'member', // Default role
+      },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
     }
 });
 

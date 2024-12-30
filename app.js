@@ -31,6 +31,17 @@ app.get("/home", (req, res) => {
     res.sendFile(path.join(__dirname, "views", "home.html"));
   });
 
+  app.get("/myProfile", (req, res) => {
+    res.sendFile(path.join(__dirname, "views", "myProfile.html"));
+  });
+
+  app.get("/adminpanel", (req, res) => {
+    res.sendFile(path.join(__dirname, "views", "adminpanel.html"));
+  });
+
+
+
+  
   // Example: Safely checking S3 service status without exposing details
 s3.listBuckets((err, data) => {
     if (err) {

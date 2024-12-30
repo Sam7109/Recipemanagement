@@ -37,7 +37,6 @@
                 .then((response) => {
             if (response.data.success) {
                 console.log("Token:", response.data.token);
-                console.log(response.data)
               localStorage.setItem("jwt",  response.data.token);
 
               console.log("Login successful:", response.data);
@@ -45,10 +44,20 @@
                window.location.href = "/home"; // Example redirection after login
             }
           })
-                .catch(error => {
-                    alert('Login failed: ' + error.response.data.errors[0].msg);
-                    console.error(error.response.data);
-                });
+          .catch((error) => {
+  if (error.response) {
+    if (error.response.status === 403) {
+      alert('Login failed: Your account is inactive. Please contact support.');
+    } else if (error.response.status === 400 || error.response.status === 500) {
+      alert('Login failed: ' + error.response.data.message);
+    } else {
+      alert('Login failed: Unexpected error occurred.');
+    }
+  } else {
+    console.error('Error:', error);
+    alert('Login failed: Unable to connect to the server.');
+  }
+});
             });
 
             // Handle Signup Form Submission

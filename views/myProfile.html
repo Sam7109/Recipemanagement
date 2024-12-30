@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create and View Recipes</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f9; /* Light grey background for a subtle texture */
+        }
+        .container {
+            padding-top: 40px; /* More padding to the top for better visual spacing */
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Enhance shadow for a 3D effect */
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for hover effects */
+            width: 18rem; /* Smaller card width */
+            margin: 0.5rem; /* Margin for even spacing */
+        }
+        .card:hover {
+            transform: translateY(-5px); /* Slight lift effect on hover */
+            box-shadow: 0 12px 16px rgba(0, 0, 0, 0.2); /* Deeper shadow on hover for emphasis */
+        }
+        .card-img-top {
+            height: 150px; /* Smaller fixed height for images */
+            object-fit: cover; /* Ensure images cover the card area */
+        }
+        .modal-header {
+            background-color: #0056b3; /* Darker blue for the modal header for contrast */
+            color: white;
+        }
+        .modal-content {
+            border-radius: 0.5rem; /* Rounded corners for the modal */
+        }
+        .btn-primary {
+            background-color: #007bff; /* Standard Bootstrap primary color */
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #004085;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center; /* Center the cards */
+        }
+        .character-counter {
+            float: right;
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .form-group {
+            position: relative;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center text-primary mb-4">My Recipes</h1>
+        <div id="recipe-list" class="row"></div>
+    </div>
+
+    <!-- Modal for displaying recipe details -->
+    <div class="modal fade" id="recipeModal" tabindex="-1" aria-labelledby="recipeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="recipeModalLabel">Recipe Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Content will be filled dynamically by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Recipe Modal -->
+    <div class="modal fade" id="editRecipeModal" tabindex="-1" aria-labelledby="editRecipeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editRecipeModalLabel">Edit Recipe</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRecipeForm">
+                        <input type="hidden" id="edit-recipe-id">
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea class="form-control" id="edit-description" rows="3" maxlength="40"></textarea>
+                            <span class="character-counter" id="description-counter">0/40</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Ingredients</label>
+                            <textarea class="form-control" id="edit-ingredients" rows="3" maxlength="500"></textarea>
+                            <span class="character-counter" id="ingredients-counter">0/500</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Instructions</label>
+                            <textarea class="form-control" id="edit-instructions" rows="3" maxlength="1000"></textarea>
+                            <span class="character-counter" id="instructions-counter">0/1000</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Cooking Time</label>
+                            <input type="text" class="form-control" id="edit-cookingtime">
+                        </div>
+                        <div class="form-group">
+                            <label>Serving</label>
+                            <input type="text" class="form-control" id="edit-serving">
+                        </div>
+                        <div class="form-group">
+                            <label>Difficulty</label>
+                            <input type="text" class="form-control" id="edit-difficulty">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRecipeChanges()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Global function to show recipe details
+    function showRecipeDetails(recipe) {
+        const modalContent = `
+            <img src="${recipe.image}" class="img-fluid mb-3" alt="Recipe Image">
+            <p><strong>Description:</strong> ${recipe.description}</p>
+            <p><strong>Ingredients:</strong> ${recipe.ingredients}</p>
+            <p><strong>Instructions:</strong> ${recipe.instructions}</p>
+            <p><strong>Cooking Time:</strong> ${recipe.cookingtime}</p>
+            <p><strong>Serving:</strong> ${recipe.serving}</p>
+            <p><strong>Difficulty:</strong> ${recipe.difficulty}</p>
+        `;
+        $('#recipeModal .modal-body').html(modalContent);
+        $('#recipeModal').modal('show');
+    }
+
+    // Global function to edit recipe
+    function editRecipe(recipeData) {
+        try {
+            const recipe = typeof recipeData === 'string' ? JSON.parse(recipeData) : recipeData;
+            $('#edit-recipe-id').val(recipe.id);
+            $('#edit-description').val(recipe.description);
+            $('#edit-ingredients').val(recipe.ingredients);
+            $('#edit-instructions').val(recipe.instructions);
+            $('#edit-cookingtime').val(recipe.cookingtime);
+            $('#edit-serving').val(recipe.serving);
+            $('#edit-difficulty').val(recipe.difficulty);
+            
+            // Update character counters
+            updateCharacterCount($('#edit-description'), 'description-counter', 40);
+            updateCharacterCount($('#edit-ingredients'), 'ingredients-counter', 500);
+            updateCharacterCount($('#edit-instructions'), 'instructions-counter', 1000);
+            
+            $('#editRecipeModal').modal('show');
+        } catch (error) {
+            console.error('Error parsing recipe data:', error);
+        }
+    }
+
+    $(document).ready(function () {
+        function fetchRecipesPostedbyUser() {
+            console.log('JWT Token:', localStorage.getItem('jwt'));
+
+            axios.get('/users/findRecipe', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(function (response) {
+                console.log('Recipes response:', response.data);
+                const recipes = response.data;
+                const recipeList = $('#recipe-list');
+                recipeList.empty();
+
+                if (!recipes || recipes.length === 0) {
+                    recipeList.html('<p class="text-center">No recipes found!</p>');
+                    return;
+                }
+
+                recipes.forEach(function (recipe) {
+                    const recipeItem = `
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <img src="${recipe.image}" class="card-img-top" alt="Recipe Image">
+                                <div class="card-body">
+                                    <h5 class="card-title">${recipe.description}</h5>
+                                    <button class="btn btn-primary btn-sm mr-2" onclick="showRecipeDetails(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">View</button>
+                                    <button class="btn btn-warning btn-sm" onclick="editRecipe(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">Edit</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    recipeList.append(recipeItem);
+                });
+            })
+            .catch(function (error) {
+                console.error('Error fetching recipes:', error);
+                if (error.response) {
+                    console.log('Error response:', error.response.data);
+                    console.log('Error status:', error.response.status);
+                }
+                $('#recipe-list').html('<p class="text-center text-danger">Error loading recipes. Please check console for details.</p>');
+            });
+        }
+
+        // Function to update character count
+        window.updateCharacterCount = function(element, counterId, maxLength) {
+            const currentLength = $(element).val().length;
+            $(`#${counterId}`).text(`${currentLength}/${maxLength}`);
+        };
+
+        // Save recipe changes
+        window.saveRecipeChanges = async function() {
+            const recipeId = $('#edit-recipe-id').val();
+            const updatedRecipe = {
+                description: $('#edit-description').val(),
+                ingredients: $('#edit-ingredients').val(),
+                instructions: $('#edit-instructions').val(),
+                cookingtime: $('#edit-cookingtime').val(),
+                serving: $('#edit-serving').val(),
+                difficulty: $('#edit-difficulty').val()
+            };
+
+            try {
+                const response = await axios.put(`/users/editRecipe/${recipeId}`, updatedRecipe, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                    }
+                });
+
+                if (response.data.success) {
+                    $('#editRecipeModal').modal('hide');
+                    fetchRecipesPostedbyUser();
+                }
+            } catch (error) {
+                console.error('Error updating recipe:', error);
+                alert('Failed to update recipe: ' + error.message);
+            }
+        };
+
+        // Initialize character counters
+        $('#edit-description, #edit-ingredients, #edit-instructions').on('input', function() {
+            const $this = $(this);
+            const maxLength = $this.attr('maxlength');
+            const counterId = $this.attr('id').replace('edit-', '') + '-counter';
+            updateCharacterCount($this, counterId, maxLength);
+        });
+
+        // Initial fetch
+        fetchRecipesPostedbyUser();
+    });
+    </script>
+</body>
+</html>
