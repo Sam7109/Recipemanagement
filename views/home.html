@@ -1,16 +1,21 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create and View Recipes</title>
+    <!-- Bootstrap CSS -->
     <link
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Full Version of jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <!-- Popper.js and Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Axios for HTTP Requests -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
       body {
@@ -60,12 +65,13 @@
         font-weight: bold;
       }
       .recipe-list-container {
-        display: flex;
-        flex-direction: column; /* Display recipes vertically */
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 20px;
+        padding: 20px;
       }
       .recipe-item {
-        cursor: pointer;
+        width: 100%;
       }
       .input-group {
         max-width: 600px; /* Shorten the search bar */
@@ -79,6 +85,16 @@
       @media (max-width: 576px) {
         .recipe-item {
           flex: 1 1 100%;
+        }
+      }
+      @media (max-width: 992px) {
+        .recipe-list-container {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 576px) {
+        .recipe-list-container {
+          grid-template-columns: 1fr;
         }
       }
       .character-counter {
@@ -95,39 +111,44 @@
     <div class="container mt-5">
       <h1 class="text-center mb-4">Your Favorite Meals, Just a Click Away</h1>
       <div style="position: absolute; top: 10px; right: 10px;">
-          <!-- My Profile Button -->
-          <button id="myProfileBtn" class="btn btn-primary" style="margin-right: 10px;">
-              My Profile
-          </button>
-          <button id="logoutBtn" class="btn btn-danger">
-              Logout
-          </button>
+        <!-- My Profile Button -->
+        <button id="myProfileBtn" class="btn btn-primary" style="margin-right: 10px;">
+          My Profile
+        </button>
+        <button id="logoutBtn" class="btn btn-danger">
+          Logout
+        </button>
       </div>
-  </div>
-  
-  <!-- Filter Form -->
-<!-- Filter Form -->
-<div class="mb-4">
- 
-  <form id="filterForm" class="form-inline justify-content-center">
-    <div class="form-group mr-2">
-      <label for="filterDifficultySelect" class="mr-2">Difficulty:</label>
-      <select class="form-control" id="filterDifficultySelect">
-        <option value="" selected disabled>Select Option</option>
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
-      </select>
-    </div>
-    <div class="form-group mr-2">
-      <label for="filterCookingTimeInput" class="mr-2">Max Cooking Time:</label>
-      <input type="number" class="form-control" id="filterCookingTimeInput" placeholder="Max Time">
-    </div>
-    <button type="submit" class="btn btn-primary">Filter</button>
-  </form>
-</div>
 
-    
+      <!-- Filter Form -->
+      <div class="mb-4">
+        <form id="filterForm" class="form-inline justify-content-center">
+          <div class="form-group mr-2">
+            <label for="difficultyoptions" class="mr-2">Difficulty:</label>
+            <select class="form-control" id="difficultyoptions" name="difficulty">
+              <option value="" selected disabled>Select Option</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="form-group mr-2">
+            <label for="cookingTimeoptions" class="mr-2">Max Cooking Time (minutes):</label>
+            <input
+              type="number"
+              class="form-control"
+              id="cookingTimeoptions"
+              name="cookingTime"
+              placeholder="Max Time"
+              min="1"
+              max="999"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary mr-2">Filter</button>
+          <button type="reset" id="resetButton" class="btn btn-secondary">Reset</button>
+        </form>
+      </div>
+
       <!-- Trigger Button for Adding New Recipe -->
       <button
         type="button"
@@ -171,17 +192,28 @@
           </div>
         </div>
       </div>
+
+      <!-- Search Input -->
       <div class="input-group mb-3">
-        <input type="text" id="searchInput" class="form-control" placeholder="Search recipes..." aria-label="Search recipes" aria-describedby="button-addon2">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Search recipes..."
+          aria-label="Search recipes"
+          aria-describedby="button-addon2"
+        />
         <div class="input-group-append">
           <button class="btn btn-outline-secondary" type="button" id="searchButton">Search</button>
         </div>
       </div>
+
       <!-- Section to Display All Recipes -->
       <div id="recipe-list" class="recipe-list-container mt-4">
         <!-- Recipes will be populated here dynamically -->
       </div>
     </div>
+
     <!-- Modal for Adding New Recipe -->
     <div
       class="modal fade"
@@ -286,166 +318,319 @@
     </div>
 
     <script>
-     $(document).ready(function () {
-    // Bind form submission event handler
-    $('#filterForm').submit(function (event) {
-        event.preventDefault();
-        const difficulty = $('#difficultyoptions').val();
-        const cookingTime = $('#cookingTimeoptions').val();
+      $(document).ready(function () {
+        /**
+         * Function: fetchAllRecipes
+         * Description: Fetches all recipes from the backend and displays them.
+         */
+        function fetchAllRecipes() {
+          axios
+            .get("/users/getAllRecipes", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`, // Include JWT in header
+              },
+            })
+            .then((response) => {
+              const recipes = response.data;
+              const recipeList = $("#recipe-list");
 
-        axios.get('users/filterRecipe', {
-            params: {
-                difficulty: difficulty,
-                cookingTime: cookingTime
-            },
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('jwt')}`
-            },
-        })
-        .then(function (response) {
-            const recipes = response.data.recipes; // Ensure this matches the structure of the response
-            const recipeList = $('#recipe-list');
-            recipeList.empty(); // Clear previous results
+              recipeList.empty(); // Clear existing recipes
 
-            if (recipes.length === 0) {
-                recipeList.html('<p>No recipes found!</p>');
+              if (recipes.length === 0) {
+                recipeList.html("<p>No recipes found!</p>");
                 return;
-            }
+              }
 
-            // Populate the recipe list with filtered recipes
-            recipes.forEach(function (recipe) {
+              // Populate the recipe list with all recipes
+              recipes.forEach((recipe) => {
                 const recipeItem = `
-                    <div class="col-md-4 mb-3">
-                        <div class="card" data-id="${recipe.id}">
-                            <img src="${recipe.image}" class="card-img-top" alt="Recipe Image">
-                            <div class="card-body">
-                                <h5 class="card-title">${recipe.description}</h5> <!-- Assuming title is stored in description based on your data structure -->
-                                <p>${recipe.description}</p>
-                            </div>
-                        </div>
+                  <div class="recipe-item" data-id="${recipe.id}">
+                    <div class="card h-100">
+                      <img src="${recipe.image}" class="card-img-top" alt="Recipe Image" style="height: 200px; object-fit: cover;">
+                      <div class="card-body">
+                        <h5 class="card-title">${recipe.description}</h5>
+                        <p class="card-text">
+                          <small class="text-muted">
+                            Difficulty: ${recipe.difficulty}<br>
+                            Cooking Time: ${recipe.cookingtime}
+                          </small>
+                        </p>
+                      </div>
                     </div>
+                  </div>
                 `;
                 recipeList.append(recipeItem);
-            });
+              });
 
-            // Add modal functionality to each card
-            $('.card').click(function() {
-                const id = $(this).data('id');
-                const selectedRecipe = recipes.find(r => r.id === id);
-                const modalContent = `
-                    <h5>${selectedRecipe.description}</h5> <!-- Adjusted to use description for title as your data suggests -->
+              // Attach click event to each recipe item for displaying details
+              $(".recipe-item")
+                .off("click")
+                .on("click", function () {
+                  const recipeId = $(this).data("id");
+
+                  // Find the selected recipe
+                  const selectedRecipe = recipes.find(
+                    (recipe) => recipe.id === recipeId
+                  );
+
+                  if (!selectedRecipe) {
+                    alert("Recipe details not found.");
+                    return;
+                  }
+
+                  // Populate the modal with recipe details
+                  const recipeDetail = `
+                    <h5 class="modal-title">${selectedRecipe.description}</h5>
                     <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
-                    <p><strong>Description:</strong> ${selectedRecipe.ingredients}</p> <!-- Assuming ingredients field is used as a description -->
+                    <p><strong>Ingredients:</strong> ${selectedRecipe.ingredients}</p>
                     <p><strong>Instructions:</strong> ${selectedRecipe.instructions}</p>
                     <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime}</p>
                     <p><strong>Serving:</strong> ${selectedRecipe.serving}</p>
                     <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty}</p>
-                `;
-                $('#recipeModal .modal-body').html(modalContent);
-                $('#recipeModalLabel').text(selectedRecipe.description); // Adjusted to use description for title
-                $('#recipeModal').modal('show');
+                  `;
+                  $("#recipeDetailContent").html(recipeDetail);
+
+                  // Show the modal
+                  $("#recipeDetailModal").modal("show");
+                });
+            })
+            .catch((error) => {
+              if (error.response && error.response.status === 401) {
+                // Handle session expiration (401 Unauthorized)
+                alert("Your session has expired. Please log in again.");
+                // Redirect to the login page
+                window.location.href = "/validate"; // Or wherever your login page is
+              } else {
+                console.error("Error fetching recipes:", error);
+                alert("Failed to fetch recipes. Please try again later.");
+              }
             });
-        })
-        .catch(function (error) {
-            console.error('Error fetching filtered recipes:', error);
-        });
-    });
-});
+        }
 
-$(document).ready(function () {
-      // Logout Button Functionality
-      $("#logoutBtn").click(function () {
-        // Clear JWT token from localStorage
-        localStorage.removeItem("jwt");
+        /**
+         * Function: fetchRecipes
+         * Description: Fetches recipes based on a search query.
+         * @param {string} query - The search query.
+         */
+        function fetchRecipes(query = "") {
+          axios
+            .get("/users/searchRecipe", {
+              params: { query: query },
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`, // Confirm the token is being sent correctly
+              },
+            })
+            .then((response) => {
+              const recipes = response.data;
+              const recipeList = $("#recipe-list");
 
-        // Redirect to /validate page
-        window.location.href = "/validate";
-      });
-    })
+              recipeList.empty(); // Clear existing recipes
 
-    $(document).ready(function () {
-    // Code inside runs after the document is fully loaded
-    $("#myProfileBtn").click(function () {
-        // Redirect to /validate page
-        window.location.href = "/myProfile";  
-    })
-});
+              if (recipes.length === 0) {
+                recipeList.html("<p>No recipes found!</p>");
+                return;
+              }
 
-
-      $(document).ready(function () {
-        // Fetch all recipes when the page loads
-        axios
-          .get("/users/getAllRecipes", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("jwt")}`, // Include JWT in header
-            },
-          })
-          .then((response) => {
-            const recipes = response.data;
-            const recipeList = $("#recipe-list");
-            
-            if (recipes.length === 0) {
-              recipeList.html("<p>No recipes found!</p>");
-              return;
-            }
-
-            // Loop through the recipes and create HTML to display them
-            recipes.forEach((recipe) => {
-              const recipeItem = `
-                <div class="recipe-item" data-id="${recipe.id}">
-                  <div class="card">
-                    <div class="row no-gutters">
-                      <div class="col-md-4 recipe-card">
-                        <img src="${recipe.image}" class="card-img" alt="Recipe Image">
-                      </div>
-                      <div class="col-md-8">
-                        <div class="card-body">
-                          <h5 class="card-title">${recipe.description}</h5>
-                        </div>
+              // Populate the recipe list with search results
+              recipes.forEach((recipe) => {
+                const recipeItem = `
+                  <div class="recipe-item" data-id="${recipe.id}">
+                    <div class="card h-100">
+                      <img src="${recipe.image}" class="card-img-top" alt="Recipe Image" style="height: 200px; object-fit: cover;">
+                      <div class="card-body">
+                        <h5 class="card-title">${recipe.description || "No Title"}</h5>
+                        <p class="card-text">
+                          <small class="text-muted">
+                            Difficulty: ${recipe.difficulty}<br>
+                            Cooking Time: ${recipe.cookingtime}
+                          </small>
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              `;
-              recipeList.append(recipeItem);
+                `;
+                recipeList.append(recipeItem);
+              });
+
+              // Attach click event to each recipe item for displaying details
+              $(".recipe-item")
+                .off("click")
+                .on("click", function () {
+                  const recipeId = $(this).data("id");
+
+                  // Find the selected recipe
+                  const selectedRecipe = recipes.find(
+                    (recipe) => recipe.id === recipeId
+                  );
+
+                  if (!selectedRecipe) {
+                    alert("Recipe details not found.");
+                    return;
+                  }
+
+                  // Populate the modal with recipe details
+                  const recipeDetail = `
+                    <h5 class="modal-title">${selectedRecipe.description || "No Description"}</h5>
+                    <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
+                    <p><strong>Ingredients:</strong> ${
+                      selectedRecipe.ingredients || "Not specified"
+                    }</p>
+                    <p><strong>Instructions:</strong> ${
+                      selectedRecipe.instructions || "Not specified"
+                    }</p>
+                    <p><strong>Cooking Time:</strong> ${
+                      selectedRecipe.cookingtime || "Not specified"
+                    }</p>
+                    <p><strong>Serving:</strong> ${
+                      selectedRecipe.serving || "Not specified"
+                    }</p>
+                    <p><strong>Difficulty:</strong> ${
+                      selectedRecipe.difficulty || "Not specified"
+                    }</p>
+                  `;
+                  $("#recipeDetailContent").html(recipeDetail);
+
+                  // Show the modal
+                  $("#recipeDetailModal").modal("show");
+                });
+            })
+            .catch((error) => {
+              console.error("Error fetching recipes:", error);
+              alert("Failed to fetch recipes, please check console for details.");
             });
+        }
 
-            // Add click event to each recipe item
-            $(".recipe-item").click(function () {
-              const recipeId = $(this).data("id");
+        /**
+         * Function: updateCharacterCount
+         * Description: Updates the character counter for a specific input field.
+         * @param {object} element - The jQuery element.
+         * @param {string} counterId - The ID of the counter span.
+         * @param {number} maxLength - The maximum allowed characters.
+         */
+        function updateCharacterCount(element, counterId, maxLength) {
+          const currentLength = element.val().length;
+          $(`#${counterId}`).text(`${currentLength}/${maxLength}`);
+        }
 
-              // Find the selected recipe
-              const selectedRecipe = recipes.find(
-                (recipe) => recipe.id === recipeId
-              );
+        // ======== Initial Fetch of All Recipes on Page Load ========
+        fetchAllRecipes(); // Fetch all recipes when the page loads
 
-              // Populate the modal with recipe details
-              const recipeDetail = `
-                <h5 class="modal-title">${selectedRecipe.description}</h5>
-                <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
-                <p><strong>Ingredients:</strong> ${selectedRecipe.ingredients}</p>
-                <p><strong>Instructions:</strong> ${selectedRecipe.instructions}</p>
-                <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime}</p>
-                <p><strong>Serving:</strong> ${selectedRecipe.serving}</p>
-                <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty}</p>
-              `;
-              $("#recipeDetailContent").html(recipeDetail);
+        // ======== Reset Button Click Handler ========
+        $("#resetButton").click(function () {
+          // Since the button is of type 'reset', the form fields will automatically reset.
+          // Now, fetch all recipes to remove any applied filters.
+          fetchAllRecipes();
+        });
 
-              // Show the modal
-              $("#recipeDetailModal").modal("show");
+        // ======== Filter Form Submission Handler ========
+        $("#filterForm").submit(function (event) {
+          event.preventDefault();
+
+          // Selectors with Correct IDs
+          const difficulty = $("#difficultyoptions").val();
+          const cookingTime = $("#cookingTimeoptions").val();
+
+          // Optional: Log the values to verify
+          console.log("Difficulty Selected:", difficulty);
+          console.log("Cooking Time Entered:", cookingTime);
+
+
+          // Axios GET Request to Backend for Filtering
+          axios
+            .get("/users/filterRecipe", {
+              params: {
+                difficulty: difficulty,
+                cookingTime: cookingTime,
+              },
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+              },
+            })
+            .then(function (response) {
+              const recipes = response.data.recipes; // Ensure this matches the structure of the response
+              const recipeList = $("#recipe-list");
+              recipeList.empty(); // Clear previous results
+
+              if (recipes.length === 0) {
+                recipeList.html("<p>No recipes found!</p>");
+                return;
+              }
+
+              // Populate the recipe list with filtered recipes
+              recipes.forEach(function (recipe) {
+                const recipeItem = `
+                  <div class="recipe-item" data-id="${recipe.id}">
+                    <div class="card h-100">
+                      <img src="${recipe.image}" class="card-img-top" alt="Recipe Image" style="height: 200px; object-fit: cover;">
+                      <div class="card-body">
+                        <h5 class="card-title">${recipe.description}</h5>
+                        <p class="card-text">
+                          <small class="text-muted">
+                            Difficulty: ${recipe.difficulty}<br>
+                            Cooking Time: ${recipe.cookingtime}
+                          </small>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                `;
+                recipeList.append(recipeItem);
+              });
+
+              // Attach click event to each recipe item for displaying details
+              $(".recipe-item")
+                .off("click")
+                .on("click", function () {
+                  const recipeId = $(this).data("id");
+
+                  // Find the selected recipe
+                  const selectedRecipe = recipes.find(
+                    (recipe) => recipe.id === recipeId
+                  );
+
+                  if (!selectedRecipe) {
+                    alert("Recipe details not found.");
+                    return;
+                  }
+
+                  // Populate the modal with recipe details
+                  const recipeDetail = `
+                    <h5 class="modal-title">${selectedRecipe.description}</h5>
+                    <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
+                    <p><strong>Ingredients:</strong> ${selectedRecipe.ingredients}</p>
+                    <p><strong>Instructions:</strong> ${selectedRecipe.instructions}</p>
+                    <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime}</p>
+                    <p><strong>Serving:</strong> ${selectedRecipe.serving}</p>
+                    <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty}</p>
+                  `;
+                  $("#recipeDetailContent").html(recipeDetail);
+
+                  // Show the modal
+                  $("#recipeDetailModal").modal("show");
+                });
+            })
+            .catch(function (error) {
+              console.error("Error fetching filtered recipes:", error);
+              alert("Failed to fetch filtered recipes. Please try again later.");
             });
-          })
-          .catch((error) => {
-            if (error.response && error.response.status === 401) {
-              // Handle session expiration (401 Unauthorized)
-              alert("Your session has expired. Please log in again.");
-              // Redirect to the login page
-              window.location.href = "/validate";  // Or wherever your login page is
-            }
-            console.error("Error fetching recipes:", error);
-          });
+        });
 
-        // Handle the recipe form submission
+        // ======== Logout Button Functionality ========
+        $("#logoutBtn").click(function () {
+          // Clear JWT token from localStorage
+          localStorage.removeItem("jwt");
+
+          // Redirect to /validate page
+          window.location.href = "/validate";
+        });
+
+        // ======== My Profile Button Functionality ========
+        $("#myProfileBtn").click(function () {
+          // Redirect to /myProfile page
+          window.location.href = "/myProfile";
+        });
+
+        // ======== Handle Recipe Form Submission ========
         $("#recipeForm").submit(function (e) {
           e.preventDefault(); // Prevent the default form submission
 
@@ -518,131 +703,56 @@ $(document).ready(function () {
               alert("Error uploading image.");
             });
         });
-      });
 
-      // Function to fetch and display recipes
-      function fetchRecipes(query = '') {
-        axios.get('/users/searchRecipe', { // Ensure the endpoint is correct and accessible
-            params: { query: query },
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('jwt')}`, // Confirm the token is being sent correctly
-            },
-        })
-        .then((response) => {
-            const recipes = response.data;
-            console.log(recipes); // Debugging to see what data is returned
-            const recipeList = $('#recipe-list');
-            recipeList.empty(); // Clear previous results
-
-            if (recipes.length === 0) {
-                recipeList.html('<p>No recipes found!</p>'); // Show a message if no recipes are found
-                return;
-            }
-
-            recipes.forEach((recipe) => {
-                // Ensure all fields exist and are accessed correctly
-                const recipeItem = `
-                    <div class="recipe-item" data-id="${recipe.id}">
-                        <div class="card">
-                            <div class="row no-gutters">
-                                <div class="col-md-4 recipe-card">
-                                    <img src="${recipe.image}" class="card-img" alt="Recipe Image">
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${recipe.description || 'No Title'}</h5> <!-- Default if no title -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                recipeList.append(recipeItem);
-            });
-
-            // Use event delegation for dynamically added elements
-            recipeList.on("click", ".recipe-item", function () {
-                const recipeId = $(this).data("id");
-                const selectedRecipe = recipes.find(recipe => recipe.id === recipeId);
-
-                if (!selectedRecipe) {
-                    console.error('Recipe details not found');
-                    return;
-                }
-
-                // Safely accessing properties with fallbacks
-                const recipeDetail = `
-                    <h5 class="modal-title">${selectedRecipe.description || 'No Description'}</h5>
-                    <img src="${selectedRecipe.image}" class="img-fluid mb-3" alt="Recipe Image">
-                    <p><strong>Ingredients:</strong> ${selectedRecipe.ingredients || 'Not specified'}</p>
-                    <p><strong>Instructions:</strong> ${selectedRecipe.instructions || 'Not specified'}</p>
-                    <p><strong>Cooking Time:</strong> ${selectedRecipe.cookingtime || 'Not specified'}</p>
-                    <p><strong>Serving:</strong> ${selectedRecipe.serving || 'Not specified'}</p>
-                    <p><strong>Difficulty:</strong> ${selectedRecipe.difficulty || 'Not specified'}</p>
-                `;
-                $("#recipeDetailContent").html(recipeDetail);
-                $("#recipeDetailModal").modal("show");
-            });
-        })
-        .catch((error) => {
-            console.error('Error fetching recipes:', error);
-            alert('Failed to fetch recipes, please check console for details.');
+        // ======== Search Functionality ========
+        // Bind search button and input
+        $("#searchButton").click(function () {
+          const query = $("#searchInput").val().trim();
+          fetchRecipes(query);
         });
-    }
 
-    // Binding event listeners to buttons and inputs
-    $('#searchButton').click(function () {
-        const query = $('#searchInput').val().trim();
-        fetchRecipes(query);
-    });
-
-    $('#searchInput').on('keypress', function (event) {
-        if (event.which === 13) { // Enter key pressed
+        $("#searchInput").on("keypress", function (event) {
+          if (event.which === 13) {
+            // Enter key pressed
             const query = $(this).val().trim();
             fetchRecipes(query);
-        }
-    });
+          }
+        });
 
-    // Initial fetch without any query
-    
-    $(document).ready(function () {
-  // Add character counter functionality
-  function updateCharacterCount(element, counterId, maxLength) {
-    const currentLength = element.val().length;
-    $(`#${counterId}`).text(`${currentLength}/${maxLength}`);
-  }
+        // ======== Character Counter Functionality ========
+        // Update character counters on input
+        $("#description").on("input", function () {
+          updateCharacterCount($(this), "description-counter", 40);
+        });
 
-  // Initialize character counters
-  $('#description').on('input', function() {
-    updateCharacterCount($(this), 'description-counter', 40);
-  });
+        $("#ingredients").on("input", function () {
+          updateCharacterCount($(this), "ingredients-counter", 500);
+        });
 
-  $('#ingredients').on('input', function() {
-    updateCharacterCount($(this), 'ingredients-counter', 500);
-  });
+        $("#instructions").on("input", function () {
+          updateCharacterCount($(this), "instructions-counter", 1000);
+        });
 
-  $('#instructions').on('input', function() {
-    updateCharacterCount($(this), 'instructions-counter', 1000);
-  });
+        // Validate character lengths on form submission
+        $("#recipeForm").on("submit", function (e) {
+          const description = $("#description").val();
+          const ingredients = $("#ingredients").val();
+          const instructions = $("#instructions").val();
 
-  // Update form submission to validate lengths
-  $("#recipeForm").submit(function (e) {
-    e.preventDefault();
+          if (description.length > 40 || ingredients.length > 500 || instructions.length > 1000) {
+            e.preventDefault();
+            alert("Please ensure your text is within the character limits.");
+            return;
+          }
 
-    const description = $("#description").val();
-    const ingredients = $("#ingredients").val();
-    const instructions = $("#instructions").val();
-
-    if (description.length > 40 || ingredients.length > 500 || instructions.length > 1000) {
-      alert("Please ensure your text is within the character limits.");
-      return;
-    }
-
-    // ... rest of your existing form submission code ...
-  });
-  
-  // ... rest of your existing code ...
-});
+          // Proceed with form submission (handled in the submit handler above)
+        });
+      });
     </script>
   </body>
 </html>
+
+
+
+
+

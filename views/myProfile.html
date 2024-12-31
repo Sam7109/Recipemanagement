@@ -188,10 +188,7 @@
                 const recipeList = $('#recipe-list');
                 recipeList.empty();
 
-                if (!recipes || recipes.length === 0) {
-                    recipeList.html('<p class="text-center">No recipes found!</p>');
-                    return;
-                }
+               
 
                 recipes.forEach(function (recipe) {
                     const recipeItem = `
@@ -210,13 +207,16 @@
                 });
             })
             .catch(function (error) {
-                console.error('Error fetching recipes:', error);
-                if (error.response) {
-                    console.log('Error response:', error.response.data);
-                    console.log('Error status:', error.response.status);
-                }
-                $('#recipe-list').html('<p class="text-center text-danger">Error loading recipes. Please check console for details.</p>');
-            });
+    console.error('Error fetching recipes:', error);
+    const recipeList = $('#recipe-list');
+    if (error.response && error.response.status === 404) {
+        // Display "No recipes found!" message within a Bootstrap column for proper alignment
+        recipeList.html('<div class="col-12"><p class="text-center">No recipes found!</p></div>');
+    } else {
+        // Display a generic error message for other error statuses
+        recipeList.html('<div class="col-12"><p class="text-center text-danger">Failed to fetch recipes. Please check console for details.</p></div>');
+    }
+});
         }
 
         // Function to update character count

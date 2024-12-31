@@ -1,4 +1,6 @@
 const Recipe = require("../model/recipe");
+const { Op } = require('sequelize');
+
 const Userdetails = require("../model/userdetails");
 
 const { Sequelize } = require("sequelize");
@@ -125,49 +127,49 @@ exports.filterByuserProfile = async (req, res) => {
   }
 };
 
+
 exports.recipeFilters = async (req, res) => {
   try {
-    const { difficulty, time } = req.query;
+    const { difficulty, cookingTime } = req.query; // Match `cookingTime` from the frontend
+    // Build the where clause for filtering
+    let whereClause = {};
 
-    // Build the query object based on provided parameters
-    let query = {};
-
+    // Add difficulty to the where clause if provided
     if (difficulty) {
-      query.difficulty = difficulty;
+      whereClause.difficulty = difficulty.trim(); // Trim whitespace for consistency
     }
 
-    if (time) {
-      // Assuming 'cookingTime' is stored in minutes in the database
-      query.cookingTime = { $lte: parseInt(time) }; // $lte means "less than or equal to"
+    // Add cookingTime to the where clause if provided
+    if (cookingTime) {
+      whereClause.cookingtime = { [Op.lte]: parseInt(cookingTime) }; // Use Sequelize Op for <= comparison
     }
 
-    // Find recipes based on the constructed query
-    const recipes = await Recipe.findAll({
-        where: query
-    });
-    
+    // Query the database with the constructed where clause
+    const recipes = await Recipe.findAll({ where: whereClause });
+
+    // Return the filtered recipes
     res.status(200).json({ recipes });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error retrieving recipes", error: error });
+    console.error('Error retrieving recipes:', error);
+    res.status(500).json({ message: "Error retrieving recipes", error });
   }
 };
 
-exports.adminPanel = async(req,res)=>{
-  try{
-    const userDetails = await Userdetails.findAll({
-      attributes: ['email', 'isActive']
-    });
-    if(userDetails.length === 0 || !userDetails){
-      return res.status(404).json({message:"No user found"})
-    }
-    return res.status(200).json(userDetails)
-  }catch(error){
-    console.error(error)
-    return res.status(500).json({message:"Error retrieving recipes"})
-  }
-}
 
+exports.adminPanel = async (req, res) => {
+  try {
+    const userDetails = await Userdetails.findAll({
+      attributes: ["email", "isActive"],
+    });
+    if (userDetails.length === 0 || !userDetails) {
+      return res.status(404).json({ message: "No user found" });
+    }
+    return res.status(200).json(userDetails);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error retrieving recipes" });
+  }
+};
 
 exports.updateRecipe = async (req, res) => {
   try {
@@ -178,15 +180,21 @@ exports.updateRecipe = async (req, res) => {
     const recipe = await Recipe.findOne({ where: { id: recipeId } });
 
     if (!recipe) {
-      return res.status(404).json({ success: false, message: 'Recipe not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Recipe not found" });
     }
 
     // Update the recipe with the new data
     await recipe.update(updatedRecipe);
 
-    return res.status(200).json({ success: true, message: 'Recipe updated successfully', recipe });
+    return res
+      .status(200)
+      .json({ success: true, message: "Recipe updated successfully", recipe });
   } catch (error) {
-    console.error('Error updating recipe:', error);
-    return res.status(500).json({ success: false, message: 'Failed to update recipe' });
+    console.error("Error updating recipe:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update recipe" });
   }
 };
