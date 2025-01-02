@@ -30,28 +30,6 @@
       font-weight: bold;
       color: #343a40;
     }
-    .card-body {
-      padding: 1.25rem;
-    }
-    .modal-header {
-      background-color: #007bff;
-      color: white;
-    }
-    .modal-footer .btn {
-      background-color: #007bff;
-      color: white;
-    }
-    .btn-primary {
-      background-color: #007bff;
-      border-color: #007bff;
-    }
-    .btn-primary:hover {
-      background-color: #0056b3;
-      border-color: #004085;
-    }
-    .table {
-      margin-top: 20px;
-    }
     .table th, .table td {
       vertical-align: middle;
       padding: 15px;
@@ -69,13 +47,20 @@
     .text-success {
       color: #28a745 !important;
     }
+    .spinner-border {
+      display: block;
+      margin: 20px auto;
+    }
   </style>
 </head>
 <body>
   <div class="container mt-5">
+    <div class="d-flex justify-content-between mb-4">
+      <h1 class="card-title">Admin Panel</h1>
+      <button class="btn btn-primary" onclick="redirectToHome()">Home</button>
+    </div>
     <div class="card">
       <div class="card-body">
-        <h1 class="card-title text-center mb-4">Admin Panel</h1>
         <table class="table table-bordered table-striped">
           <thead class="table-dark">
             <tr>
@@ -94,50 +79,83 @@
   </div>
 
   <script>
+    // Redirect to /home
+    function redirectToHome() {
+      window.location.href = '/home';
+    }
+
     // Fetch users dynamically
     async function fetchUsers() {
+      const userTable = document.getElementById('userTable');
+      userTable.innerHTML = '<tr><td colspan="4" class="text-center"><div class="spinner-border" role="status"></div></td></tr>'; // Loading spinner
+      
+      const jwt = localStorage.getItem('jwt');
+      if (!jwt) {
+        alert('Session expired. Please log in again.');
+        window.location.href = '/login'; // Redirect to login page
+        return;
+      }
+
       try {
         const response = await fetch('/users/adminPanel', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('jwt')}` // Replace with your actual token
+            Authorization: `Bearer ${jwt}`
           }
         });
-        const data = await response.json(); // Expecting the array of users
-        const userTable = document.getElementById('userTable');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+
+        const data = await response.json(); // Expecting an array of users
         userTable.innerHTML = ''; // Clear table for dynamic population
 
+        if (data.length === 0) {
+          userTable.innerHTML = '<tr><td colspan="4" class="text-center">No users found.</td></tr>';
+          return;
+        }
+
         data.forEach((user, index) => {
+          const row = document.createElement('tr');
           const statusClass = user.isActive ? 'text-success' : 'text-danger';
           const actionButtonClass = user.isActive ? 'btn-danger' : 'btn-success';
           const actionButtonText = user.isActive ? 'Disable' : 'Enable';
-          const actionFunction = `toggleStatus('${user.email}', ${user.isActive})`;
 
-          userTable.innerHTML += `
-            <tr>
-              <th scope="row">${index + 1}</th>
-              <td>${user.email}</td>
-              <td class="${statusClass}">${user.isActive ? 'Active' : 'Disabled'}</td>
-              <td>
-                <button class="btn ${actionButtonClass} btn-sm" onclick="${actionFunction}">
-                  ${actionButtonText}
-                </button>
-              </td>
-            </tr>
+          row.innerHTML = `
+            <th scope="row">${index + 1}</th>
+            <td>${user.email}</td>
+            <td class="${statusClass}">${user.isActive ? 'Active' : 'Disabled'}</td>
+            <td>
+              <button class="btn ${actionButtonClass} btn-sm">${actionButtonText}</button>
+            </td>
           `;
+
+          const button = row.querySelector('button');
+          button.addEventListener('click', () => toggleStatus(user.email, user.isActive));
+
+          userTable.appendChild(row);
         });
       } catch (error) {
         console.error('Error fetching users:', error);
+        userTable.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to fetch users. Please try again later.</td></tr>';
       }
     }
 
     // Toggle user status dynamically
     async function toggleStatus(email, isActive) {
+      const jwt = localStorage.getItem('jwt');
+      if (!jwt) {
+        alert('Session expired. Please log in again.');
+        window.location.href = '/login'; // Redirect to login page
+        return;
+      }
+
       try {
         const response = await fetch(`/users/updateAccountStatus`, {
           method: 'PATCH',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('jwt')}` // Ensure the token is sent
+            'Authorization': `Bearer ${jwt}` 
           },
           body: JSON.stringify({ email, isActive: !isActive }),
         });
@@ -149,6 +167,7 @@
         fetchUsers(); // Refresh the user list after status change
       } catch (error) {
         console.error('Error toggling user status:', error);
+        alert('Failed to update user status. Please try again.');
       }
     }
 
