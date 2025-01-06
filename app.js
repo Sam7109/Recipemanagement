@@ -66,5 +66,5 @@ sequelize
     console.error("Error syncing the database:", err);
   });
 
-
+//added to cjheck if the server is running
 
